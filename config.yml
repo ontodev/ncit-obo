@@ -1,0 +1,28 @@
+prefixes:
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  ncit: http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#
+  ncicp: http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#
+  obo: http://purl.obolibrary.org/obo/
+
+mapping:
+  ncit:P90: obo:IAO_0000118
+  ncit:P97: obo:IAO_0000115
+  ncicp:def-definition: obo:IAO_0000115
+  ncicp:def-source: obo:IAO_0000119
+  ncicp:term-name: rdfs:label
+  ncicp:term-source: obo:IAO_0000117
+  ncicp:go-term: rdf:comment
+
+xml:
+  ncicp:ComplexDefinition:
+    primary: ncicp:def-definition
+    secondary:
+      - ncicp:def-source 
+  ncicp:ComplexTerm:
+    primary: ncicp:term-name
+    secondary:
+      - ncicp:term-source 
+  ncicp:ComplexGOAnnotation:
+    primary: ncicp:go-term
+    secondary:
