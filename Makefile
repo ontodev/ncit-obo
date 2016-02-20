@@ -34,7 +34,7 @@ SHELL := bash
 # load into local Maven repository
 
 build/robot.jar: | build
-	curl -L -o $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar
+	curl -k -L -o $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar
 
 local_maven_repo: build/robot.jar
 	mkdir -p $@
