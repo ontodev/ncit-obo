@@ -8,7 +8,7 @@ Convert NCI Thesaurus OWL to OBO-standard OWL.
 - GNU Make
 - Java 7
 - Maven 3
-- Leiningen 2
+- Leiningen 2.5
 
 
 ## Usage
