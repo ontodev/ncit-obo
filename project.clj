@@ -3,6 +3,9 @@
   :url "https://github.com/ontodev/ncit-obo"
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [clj-yaml "0.4.0"]
+                 [clj-http "2.1.0"]
+                 [cheshire "5.5.0"]
+                 [org.clojars.kostafey/clucy "0.5.4.1d"]
                  [org.obolibrary/robot "0.0.1-SNAPSHOT"]]
   :repositories [["local_maven_repo"
                   {:url "file:local_maven_repo"
