@@ -47,7 +47,8 @@ lib:
 # load into local Maven repository
 
 lib/robot.jar:
-	curl -Lko $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar
+	curl -Lko $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar | lib
+
 
 local_maven_repo: lib/robot.jar
 	mkdir -p $@
