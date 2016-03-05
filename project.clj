@@ -2,10 +2,14 @@
   :description "Convert NCI Thesaurus OWL to OBO-standard OWL"
   :url "https://github.com/ontodev/ncit-obo"
   :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/math.combinatorics  "0.1.1"]
                  [clj-yaml "0.4.0"]
                  [clj-http "2.1.0"]
                  [cheshire "5.5.0"]
-                 [org.clojars.kostafey/clucy "0.5.4.1d"]
+                 [clj-fuzzy "0.3.1"]
+                 [clojure-stemmer "0.1.0"]
+                 [clucy "0.4.0"]
+                 [net.mikera/core.matrix "0.49.0"]
                  [org.obolibrary/robot "0.0.1-SNAPSHOT"]]
   :repositories [["local_maven_repo"
                   {:url "file:local_maven_repo"

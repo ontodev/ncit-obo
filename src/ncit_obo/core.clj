@@ -19,4 +19,5 @@
     (do
       (apply println "Unknown command:" args)
       (usage)
-      (System/exit 1))))
+      (System/exit 1)))
+  (shutdown-agents))

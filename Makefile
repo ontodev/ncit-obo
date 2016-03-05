@@ -149,6 +149,10 @@ build/XMLLiterals.tsv: | build
 fuseki-ncit: build/ncit.owl | lib/jena/bin/tdbloader lib/fuseki
 	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(NCIT)' $<
 
+.PHONY: fuseki-ncit-obo
+fuseki-ncit-obo: build/ncit-obo.owl | lib/jena/bin/tdbloader lib/fuseki
+	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(NCIT)' $<
+
 # Handle OBO ontologies:
 
 .PHONY: fuseki-%
@@ -156,7 +160,7 @@ fuseki-%: build/%.owl | lib/jena/bin/tdbloader lib/fuseki
 	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(OBO)/$*.owl' $<
 
 .PHONY: fuseki-load
-fuseki-load: fuseki-ncit fuseki-go
+fuseki-load: fuseki-ncit-obo fuseki-go
 
 # Run Fuseki in a second shell!
 .PHONY: fuseki
@@ -205,7 +209,7 @@ build/ncit-obo.owl: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar config
 # See above.
 
 build/cellular_process.tsv: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar build/ncit.owl build/go.owl
-	java -Xmx4g -jar $< align $(OBO)/go.owl obo:GO_0044763 $(NCIT) ncit:C20480 $@
+	java -Xmx4g -jar $< align $(NCIT) ncit:C20480 $(OBO)/go.owl obo:GO_0044763 $@
 
 # Compress build artifacts.
 
