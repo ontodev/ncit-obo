@@ -4,7 +4,7 @@
             [clojure.math.combinatorics :as combo]
             [clojure.core.reducers :as r]
             [clj-http.client :as http]
-            [clj-fuzzy.metrics :refer [levenshtein]]
+            ;[clj-fuzzy.metrics :refer [levenshtein]]
             [clojure-stemmer.porter.stemmer :refer [stemming]]
             [clucy.core :as clucy]
             [clojure.core.matrix :as m]))
@@ -176,11 +176,41 @@ ORDER BY ?s"))
 ;; but both failed for me when used with pmap.
 ;; I couldn't figure out why.
 
+(defn da-lev [^String str1 ^String str2]
+  (let [l1 (count str1)
+        l2 (count str2)
+        mx (m/new-matrix :ndarray (inc l1) (inc l2))]
+    (m/mset! mx 0 0 0)
+    (dotimes [i l1]
+      (m/mset! mx (inc i) 0 (inc i)))
+    (dotimes [j l2]
+      (m/mset! mx 0 (inc j) (inc j)))
+    (dotimes [i l1]
+      (dotimes [j l2]
+        (let [i+ (inc i) j+ (inc j)
+              i- (dec i) j- (dec j)
+              cost (if (= (.charAt str1 i)
+                          (.charAt str2 j))
+                     0 1)]
+          (m/mset! mx i+ j+
+                   (min (inc (m/mget mx i j+))
+                        (inc (m/mget mx i+ j))
+                        (+ (m/mget mx i j) cost)))
+          (if (and (pos? i) (pos? j)
+                   (= (.charAt str1 i)
+                      (.charAt str2 j-))
+                   (= (.charAt str1 i-)
+                      (.charAt str2 j)))
+            (m/mset! mx i+ j+
+                     (min (m/mget mx i+ j+)
+                          (+ (m/mget mx i- j-) cost)))))))
+    (m/mget mx l1 l2)))
+
 (defn measure
   [syn1 syn2]
   [syn1
    syn2
-   (levenshtein (:normalized syn1) (:normalized syn2))])
+   (da-lev (:normalized syn1) (:normalized syn2))])
 
 (defn find-best
   "Given a sequence of SynonymMaps for a branch,
@@ -260,7 +290,7 @@ ORDER BY ?s"))
     (->> (process-annotations graph1 root1)
          ;(filter #(contains? test-terms (:subject %)))
          (partition-by :subject)
-         (take 5)
+         ;(take 20)
          ;(map (partial find-best branch2))
          (pmap (partial find-best branch2))
          ;(pmap (partial find-best2 index))

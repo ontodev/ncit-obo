@@ -9,7 +9,7 @@
                  [clj-fuzzy "0.3.1"]
                  [clojure-stemmer "0.1.0"]
                  [clucy "0.4.0"]
-                 [net.mikera/core.matrix "0.49.0"]
+                 [net.mikera/core.matrix "0.29.1"]
                  [org.obolibrary/robot "0.0.1-SNAPSHOT"]]
   :repositories [["local_maven_repo"
                   {:url "file:local_maven_repo"
