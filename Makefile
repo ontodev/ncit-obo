@@ -108,13 +108,16 @@ target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar: project.clj src/ncit_obo/
 # TODO: use a link to the latest Thesaurus.owl
 # TODO: use inferred file?
 
+NCIT_RELEASE := 16.03d
+NCIT_URL := http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/archive/$(NCIT_RELEASE)_Release/Thesaurus_$(NCIT_RELEASE).OWL.zip
+
 build:
 	mkdir -p $@
 
-build/ncit.owl.zip: | build
-	curl -L -o $@ http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/archive/16.03d_Release/Thesaurus_16.03d.OWL.zip
+build/Thesaurus.owl.zip: | build
+	curl -L -o $@ $(NCIT_URL)
 
-build/ncit.owl: build/ncit.owl.zip
+build/Thesaurus.owl: build/Thesaurus.owl.zip
 	unzip -qc $< Thesaurus.owl > $@
 
 
@@ -159,10 +162,6 @@ build/XMLLiterals.tsv: | build
 fuseki-ncit: build/ncit.owl | lib/jena/bin/tdbloader lib/fuseki
 	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(NCIT)' $<
 
-.PHONY: fuseki-ncit-obo
-fuseki-ncit-obo: build/ncit-obo.owl | lib/jena/bin/tdbloader lib/fuseki
-	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(NCIT)' $<
-
 # Handle OBO ontologies:
 
 .PHONY: fuseki-%
@@ -170,7 +169,7 @@ fuseki-%: build/%.owl | lib/jena/bin/tdbloader lib/fuseki
 	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(OBO)/$*.owl' $<
 
 .PHONY: fuseki-load
-fuseki-load: fuseki-ncit-obo fuseki-go
+fuseki-load: fuseki-ncit fuseki-go
 
 # Run Fuseki in a second shell!
 .PHONY: fuseki
@@ -196,7 +195,7 @@ build/biological_processes.tsv: src/biological_processes.rq | lib/fuseki/tdb bui
 	| sed 's/>//g' \
 	> $@
 
-build/biological_processes.owl: build/ncit.owl build/biological_processes.tsv | lib/robot.jar
+build/biological_processes.owl: build/Thesaurus.owl build/biological_processes.tsv | lib/robot.jar
 	java -Xmx4G -jar $| extract \
 	--input $(word 1,$^) \
 	--upper-term '$(NCIT)#C17828' \
@@ -208,7 +207,7 @@ build/biological_processes.owl: build/ncit.owl build/biological_processes.tsv | 
 
 # Convert NCIt Thesaurus.owl to use OBO-style annotations.
 
-build/ncit-obo.owl: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar config.yml build/ncit.owl
+build/ncit.owl: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar config.yml build/Thesaurus.owl
 	java -Xmx4g -jar $< convert $(word 2,$^) $(word 3,$^) $@
 
 # Align GO_0044763 single-organism cellular process
@@ -218,7 +217,7 @@ build/ncit-obo.owl: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar config
 # WARN: requires a runnig Fuseki instance, with NCIt and GO loaded.
 # See above.
 
-build/cellular_process.tsv: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar build/ncit.owl build/go.owl
+build/cellular_process.tsv: target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar build/Thesaurus.owl build/go.owl
 	java -Xmx4g -jar $< align $(NCIT) ncit:C20480 $(OBO)/go.owl obo:GO_0044763 $@
 
 # Compress build artifacts.
@@ -230,7 +229,7 @@ build/%.zip: build/%
 ### Common Tasks
 
 .PHONY: all
-all: build/ncit-obo.owl
+all: build/ncit.owl
 
 .PHONY: clean
 clean:
@@ -238,4 +237,4 @@ clean:
 
 .PHONY: tidy
 tidy:
-	rm -f build/ncit.owl*
+	rm -f build/Thesaurus.owl*
