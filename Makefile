@@ -230,7 +230,7 @@ build/%.zip: build/%
 ### Common Tasks
 
 .PHONY: all
-all: build/ncit-obo.owl build/ncit-obo.owl.zip
+all: build/ncit-obo.owl
 
 .PHONY: clean
 clean:
