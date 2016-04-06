@@ -1,6 +1,6 @@
 # ncit-obo
 
-Convert NCI Thesaurus OWL to OBO-standard OWL.
+Convert NCI Thesaurus OWL to OBO-standard OWL. Download the latest converted file: [ncit.owl](https://build.berkeleybop.org/job/ncit-obo/lastSuccessfulBuild/artifact/build/ncit.owl).
 
 
 ## Requirements
