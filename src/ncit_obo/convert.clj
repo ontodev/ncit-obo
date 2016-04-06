@@ -172,11 +172,15 @@
       [(. axiom getValue)])))
 
 (defn convert
-  [config-path input-path output-path]
+  "Given paths for the configuration YAML file, the base annotation file,
+  the upstream NCI Taxonomy OWL file, and the output ncit.owl file,
+  go through every axiom and convert it to use OBO-standard annotations,
+  then save to the output path."
+  [config-path annotation-path input-path output-path]
   (println "Using" config-path "to convert" input-path "to" output-path)
   (let [config          (read-config config-path)
         input-ontology  (. io-helper loadOntology input-path)
-        output-ontology (. output-manager createOntology)]
+        output-ontology (. io-helper loadOntology annotation-path)]
     (doseq [axiom (. input-ontology getAxioms)]
       (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
         (let [subject  (. axiom getSubject)

@@ -210,7 +210,7 @@ build/biological_processes.owl: build/Thesaurus.owl build/biological_processes.t
 
 # Convert NCIt Thesaurus.owl to use OBO-style annotations.
 
-build/ncit.owl: $(NCIT_OBO_JAR) config.yml build/Thesaurus.owl
+build/ncit.owl: $(NCIT_OBO_JAR) src/config.yml src/base.ttl build/Thesaurus.owl
 	$(NCIT_OBO) convert $(wordlist 2,9,$^) $@
 
 
