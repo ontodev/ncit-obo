@@ -7,7 +7,8 @@
             ;[clj-fuzzy.metrics :refer [levenshtein]]
             [clojure-stemmer.porter.stemmer :refer [stemming]]
             [clucy.core :as clucy]
-            [clojure.core.matrix :as m]))
+            ;[clojure.core.matrix :as m]
+            ))
 
 (set! *warn-on-reflection* true)
 
@@ -176,7 +177,7 @@ ORDER BY ?s"))
 ;; but both failed for me when used with pmap.
 ;; I couldn't figure out why.
 
-(defn da-lev [^String str1 ^String str2]
+#_(defn da-lev [^String str1 ^String str2]
   (let [l1 (count str1)
         l2 (count str2)
         mx (m/new-matrix :ndarray (inc l1) (inc l2))]
@@ -210,7 +211,8 @@ ORDER BY ?s"))
   [syn1 syn2]
   [syn1
    syn2
-   (da-lev (:normalized syn1) (:normalized syn2))])
+   ;(da-lev (:normalized syn1) (:normalized syn2))
+   (levenshtein (:normalized syn1) (:normalized syn2))])
 
 (defn find-best
   "Given a sequence of SynonymMaps for a branch,
