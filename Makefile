@@ -107,13 +107,12 @@ target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar: project.clj src/ncit_obo/
 #
 # TODO: use a link to the latest Thesaurus.owl
 # TODO: use inferred file?
-# http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/ThesaurusInf_16.01d.OWL.zip
 
 build:
 	mkdir -p $@
 
 build/ncit.owl.zip: | build
-	curl -L -o $@ http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/Thesaurus_16.01d.OWL.zip
+	curl -L -o $@ http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/archive/16.03d_Release/Thesaurus_16.03d.OWL.zip
 
 build/ncit.owl: build/ncit.owl.zip
 	unzip -qc $< Thesaurus.owl > $@
