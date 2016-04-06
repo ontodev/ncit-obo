@@ -12,7 +12,7 @@
 # - unzip
 # - Java 7
 # - Maven
-# - Leiningen
+# - Leiningen 2.5+
 
 
 ### Configuration
@@ -41,6 +41,16 @@ OBO  := http://purl.obolibrary.org/obo
 lib:
 	mkdir $@
 
+
+#### Leiningen
+#
+# Make sure Leiningen is installed.
+
+lib/lein: lib
+	curl -Lko $@ https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
+	chmod +x lib/lein
+
+
 #### ROBOT
 #
 # download latest ROBOT jar
@@ -49,10 +59,10 @@ lib:
 lib/robot.jar: | lib
 	curl -Lko $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar
 
-
-local_maven_repo: lib/robot.jar
+local_maven_repo: lib/robot.jar | lib/lein
 	mkdir -p $@
-	lein deploy $@ org.obolibrary/robot 0.0.1-SNAPSHOT $<
+	lib/lein deploy $@ org.obolibrary/robot 0.0.1-SNAPSHOT $<
+
 
 #### Apache Jena
 #
@@ -89,8 +99,8 @@ lib/fuseki/shiro.ini: | lib/fuseki
 
 ### Build
 
-target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar: project.clj src/ncit_obo/ | local_maven_repo
-	lein uberjar
+target/uberjar/ncit-obo-0.1.0-SNAPSHOT-standalone.jar: project.clj src/ncit_obo/ | local_maven_repo lib/lein
+	lib/lein uberjar
 
 
 ### NCI Thesaurus OWL
