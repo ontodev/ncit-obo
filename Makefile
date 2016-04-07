@@ -48,15 +48,6 @@ lib:
 	mkdir $@
 
 
-#### Leiningen
-#
-# Make sure Leiningen is installed.
-
-lib/lein: lib
-	curl -Lko $@ https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
-	chmod +x lib/lein
-
-
 #### ROBOT
 #
 # download latest ROBOT jar
@@ -65,9 +56,9 @@ lib/lein: lib
 lib/robot.jar: | lib
 	curl -Lko $@ https://build.berkeleybop.org/job/robot/lastSuccessfulBuild/artifact/bin/robot.jar
 
-local_maven_repo: lib/robot.jar | lib/lein
+local_maven_repo: lib/robot.jar
 	mkdir -p $@
-	lib/lein deploy $@ org.obolibrary/robot 0.0.1-SNAPSHOT $<
+	lein deploy $@ org.obolibrary/robot 0.0.1-SNAPSHOT $<
 
 
 #### Apache Jena
@@ -105,8 +96,8 @@ lib/fuseki/shiro.ini: | lib/fuseki
 
 ### Build
 
-$(NCIT_OBO_JAR): project.clj src/ncit_obo/ | local_maven_repo lib/lein
-	lib/lein uberjar
+$(NCIT_OBO_JAR): project.clj src/ncit_obo/ | local_maven_repo
+	lein uberjar
 
 
 ### NCI Thesaurus OWL
