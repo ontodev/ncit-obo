@@ -58,15 +58,6 @@
        yaml/parse-string
        add-translation))
 
-
-(def ncit2obo
-  {"http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P97"
-   "http://purl.obolibrary.org/obo/IAO_0000115"
-   :ncicp:def-source
-   "http://purl.obolibrary.org/obo/IAO_0000119"
-   :ncicp:term-source
-   "http://purl.obolibrary.org/obo/IAO_0000117"})
-
 (def io-helper (IOHelper.))
 (def output-manager (. OWLManager createOWLOntologyManager))
 (def data-factory (. output-manager getOWLDataFactory))
@@ -171,6 +162,65 @@
     (catch Exception e
       [(. axiom getValue)])))
 
+(defn convert-annotation-axiom!
+  "Given a configuration map, an output ontology, a state map,
+   and an annotation axiom,
+   copy/convert the axiom, add it to the output ontology,
+   and return the updated state map."
+  [config output-ontology state axiom]
+  (let [subject  (. axiom getSubject)
+        property (get-property config axiom)
+        property-iri (. (. property getIRI) toString)
+        [value & annotations] (get-annotations config axiom)]
+    ;; When the axiom is a definition
+    ;; and there's already a definition annotation for this subject,
+    ;; then skip this axiom.
+    ;; This condition is a hack to avoid duplicate definitions,
+    ;; which break the OBOFormatWriter.
+    (if (and (= property-iri "http://purl.obolibrary.org/obo/IAO_0000115")
+             (contains? (:defined state) subject))
+      state
+      ;; Copy/convert this axiom
+      (do
+        (. output-manager
+           addAxiom
+           output-ontology
+           (. data-factory
+              getOWLAnnotationAssertionAxiom
+              property
+              subject
+              value))
+
+        ;; Add any required annotations to this axiom.
+        (when (seq? annotations)
+          (. output-manager
+             addAxiom
+             output-ontology
+             (. data-factory
+                getOWLAnnotationAssertionAxiom
+                property
+                subject
+                value
+                (set annotations))))
+
+        ;; Update the state.
+        (if (= property-iri "http://purl.obolibrary.org/obo/IAO_0000115")
+          (update-in state [:defined] conj subject)
+          state)))))
+
+(defn convert-axiom!
+  "Given a configuration map, an output ontology, a state map, and an axiom,
+   copy/convert the axiom, add it to the output ontology,
+   and return the updated state map."
+  [config output-ontology state axiom]
+  ;; When this is an annotation axiom, we might want to convert it.
+  ;; Copy all non-annotation axioms
+  (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
+    (convert-annotation-axiom! config output-ontology state axiom)
+    (do
+      (. output-manager addAxiom output-ontology axiom)
+      state)))
+
 (defn convert
   "Given paths for the configuration YAML file, the base annotation file,
   the upstream NCI Taxonomy OWL file, and the output ncit.owl file,
@@ -181,28 +231,8 @@
   (let [config          (read-config config-path)
         input-ontology  (. io-helper loadOntology input-path)
         output-ontology (. io-helper loadOntology annotation-path)]
-    (doseq [axiom (. input-ontology getAxioms)]
-      (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
-        (let [subject  (. axiom getSubject)
-              property (get-property config axiom)
-              [value & annotations] (get-annotations config axiom)]
-          (. output-manager
-             addAxiom
-             output-ontology
-             (. data-factory
-                getOWLAnnotationAssertionAxiom
-                property
-                subject
-                value))
-          (when (seq? annotations)
-            (. output-manager
-               addAxiom
-               output-ontology
-               (. data-factory
-                  getOWLAnnotationAssertionAxiom
-                  property
-                  subject
-                  value
-                  (set annotations)))))
-        (. output-manager addAxiom output-ontology axiom)))
+    (reduce
+     (partial convert-axiom! config output-ontology)
+     {:defined #{}}
+     (. input-ontology getAxioms))
     (. io-helper saveOntology output-ontology output-path)))

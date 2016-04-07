@@ -220,13 +220,21 @@ build/cellular_process.tsv: $(NCIT_OBO_JAR) build/Thesaurus.owl build/go.owl
 build/%.zip: build/%
 	cd build && zip $*.zip $*
 
+# Convert to OBO format.
+
+build/%.obo: build/%.owl | lib/robot.jar
+	$(ROBOT) convert --input $< --output $@
+
 
 ### Common Tasks
 
 .PHONY: all
 all: build/ncit.owl
+all: build/ncit.obo
 all: build/subsets/biological_process.owl
+all: build/subsets/biological_process.obo
 all: build/subsets/neoplasm.owl
+all: build/subsets/neoplasm.obo
 
 .PHONY: clean
 clean:
