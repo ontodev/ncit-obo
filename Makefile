@@ -171,29 +171,29 @@ fuseki: | lib/fuseki/tdb lib/fuseki/shiro.ini
 	cd lib/fuseki && export FUSEKI_HOME=. && ./fuseki-server --loc tdb /db
 
 
-### Biological Processes
+### Subsets
 #
-# First use Fuseki to fetch a list of children,
-# then extract with ROBOT.
-# This is just an example, not used by 'align' below.
+# Use ROBOT to extract various subsets of the converted ontology.
 
-build/biological_processes.tsv: src/biological_processes.rq | lib/fuseki/tdb build
-	cat $< \
-	| curl --fail --silent \
-	-X POST -G '$(SPARQL_URL)/query' \
-	-H 'Content-Type: application/sparql-query' \
-	-H 'Accept: text/tab-separated-values' \
-	-T - \
-	| tail -n+2 \
-	| sed 's/<//g' \
-	| sed 's/>//g' \
-	> $@
+build/subsets:
+	mkdir -p $@
 
-build/biological_processes.owl: build/Thesaurus.owl build/biological_processes.tsv | lib/robot.jar
+build/subsets/biological_process.owl: build/ncit.owl | lib/robot.jar build/subsets
 	$(ROBOT) extract \
-	--input $(word 1,$^) \
-	--upper-term '$(NCIT)#C17828' \
-	--lower-terms $(word 2,$^) \
+	--input $< \
+	--method MIREOT \
+	--branch-from-term '$(NCIT)#C17828' \
+	annotate \
+	--ontology-iri '$(OBO)/ncit/subsets/biological_process.owl' \
+	--output $@
+
+build/subsets/neoplasm.owl: build/ncit.owl | lib/robot.jar build/subsets
+	$(ROBOT) extract \
+	--input $< \
+	--method MIREOT \
+	--branch-from-term '$(NCIT)#C3262' \
+	annotate \
+	--ontology-iri '$(OBO)/ncit/subsets/neoplasm.owl' \
 	--output $@
 
 
@@ -225,6 +225,8 @@ build/%.zip: build/%
 
 .PHONY: all
 all: build/ncit.owl
+all: build/subsets/biological_process.owl
+all: build/subsets/neoplasm.owl
 
 .PHONY: clean
 clean:
