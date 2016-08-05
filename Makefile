@@ -221,8 +221,12 @@ build/%.zip: build/%
 	cd build && zip $*.zip $*
 
 # Convert to OBO format.
+# first to obtain valid OBO IDs, we have to satisfy the assumptions of the OWLAPI OBO writer that
+# class IRIs are OBO purls (hack)
 
-build/%.obo: build/%.owl | lib/robot.jar
+build/%-obouri.owl: build/%.owl
+	perl -npe 's@http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#@http://purl.obolibrary.org/obo/NCIT_@g' $< > $@.tmp && mv $@.tmp $@
+build/%.obo: build/%-obouri.owl | lib/robot.jar
 	$(ROBOT) convert --input $< --output $@
 
 
