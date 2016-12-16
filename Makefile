@@ -70,16 +70,18 @@ $(NCIT_OBO_JAR): project.clj src/ncit_obo/ | local_maven_repo
 ### NCI Thesaurus OWL
 #
 # TODO: use a link to the latest Thesaurus.owl
-# TODO: use inferred file?
 
 build:
 	mkdir -p $@
 
 build/Thesaurus.owl.zip: | build
-	curl -L -o $@ $(NCIT_DOWNLOAD)
+	curl -Lko $@ $(NCIT_DOWNLOAD)
 
 build/Thesaurus.owl: build/Thesaurus.owl.zip
 	unzip -qc $< Thesaurus.owl > $@
+
+build/Thesaurus_inferred.owl: build/Thesaurus.owl | lib/robot.jar
+	$(ROBOT) reason --input $< --output $@
 
 
 ### Gene Ontology
@@ -123,10 +125,10 @@ build/subsets/neoplasm.owl: build/ncit.owl | lib/robot.jar build/subsets
 
 
 ### Run
-
+#
 # Convert NCIt Thesaurus.owl to use OBO-style annotations.
 
-build/ncit.owl: $(NCIT_OBO_JAR) src/config.yml src/base.ttl build/Thesaurus.owl
+build/ncit.owl: $(NCIT_OBO_JAR) src/config.yml src/base.ttl build/Thesaurus_inferred.owl
 	$(NCIT_OBO) convert $(wordlist 2,9,$^) $@
 
 
@@ -140,7 +142,7 @@ build/ncit_%.rq: src/subclass.rq
 build/GO_%.rq: src/subclass.rq
 	sed 's/ROOT/obo:GO_$*/' < $< > $@
 
-build/ncit_%.csv: build/Thesaurus.owl build/ncit_%.rq | lib/robot.jar
+build/ncit_%.csv: build/Thesaurus_inferred.owl build/ncit_%.rq | lib/robot.jar
 	$(ROBOT) query --input $(word 1,$^) --select $(word 2,$^) $@
 
 build/GO_%.csv: build/go.owl build/GO_%.rq | lib/robot.jar
@@ -167,6 +169,7 @@ build/%.zip: build/%
 
 build/%-obouri.owl: build/%.owl
 	perl -npe 's@http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#@http://purl.obolibrary.org/obo/NCIT_@g' $< > $@.tmp && mv $@.tmp $@
+
 build/%.obo: build/%-obouri.owl | lib/robot.jar
 	$(ROBOT) convert --input $< --output $@
 
@@ -187,4 +190,4 @@ clean:
 
 .PHONY: tidy
 tidy:
-	rm -f build/Thesaurus.owl*
+	rm -f build/Thesaurus*
