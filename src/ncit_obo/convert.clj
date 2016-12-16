@@ -151,7 +151,7 @@
 (defn get-datatype
   [^OWLAnnotationAssertionAxiom axiom]
   (let [^OWLAnnotationValue value (. axiom getValue)
-        ^OWLLiteral literal (. value asLiteral)
+        ^OWLLiteral literal (.. value asLiteral orNull)
         ^OWLDatatype datatype (. literal getDatatype)
         ^IRI iri (. datatype getIRI)]
     (. iri toString)))
@@ -159,7 +159,7 @@
 (defn get-literal
   [^OWLAnnotationAssertionAxiom axiom]
   (let [^OWLAnnotationValue value (. axiom getValue)
-        ^OWLLiteral literal (. value asLiteral)]
+        ^OWLLiteral literal (.. value asLiteral orNull)]
     (. literal getLiteral)))
 
 (defn get-annotations
@@ -189,6 +189,7 @@
           [(. axiom getValue)]))
       [(. axiom getValue)])
     (catch Exception e
+      (println "XML Parse error" axiom e)
       [(. axiom getValue)])))
 
 (defn convert-annotation-axiom!

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#"
+     xml:base="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:Thesaurus="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:protege="http://protege.stanford.edu/plugins/owl/protege#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <owl:Ontology rdf:about="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl"/>
+
+    <!-- http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20181 -->
+
+    <owl:Class rdf:about="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20181">
+        <rdfs:subClassOf rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+        <P106 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Classification</P106>
+        <P108 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</P108>
+        <P207 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C1254372</P207>
+        <P366 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual_Entities</P366>
+        <P90 rdf:parseType="Literal"><ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:term-name>Conceptual Entity</ncicp:term-name><ncicp:term-group>PT</ncicp:term-group><ncicp:term-source>NCI</ncicp:term-source></ncicp:ComplexTerm></P90>
+        <P97 rdf:parseType="Literal"><ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:def-definition>An organizational header for concepts representing mostly abstract entities.</ncicp:def-definition><ncicp:def-source>NCI</ncicp:def-source></ncicp:ComplexDefinition></P97>
+        <code rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C20181</code>
+        <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</rdfs:label>
+    </owl:Class>
+</rdf:RDF>

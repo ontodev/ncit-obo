@@ -155,7 +155,7 @@ build/GO_%.csv: build/go.owl build/GO_%.rq | lib/robot.jar
 # and write a report.
 
 build/cellular_process.tsv: $(NCIT_OBO_JAR) build/ncit_C20480.csv build/GO_0044763.csv
-	$(NCIT_OBO) align $(word 2,$^) $(word 3,$^) $@
+	$(NCIT_OBO) align $(wordlist 2,9,$^) $@
 
 
 # Compress build artifacts.
@@ -184,6 +184,11 @@ all: build/subsets/biological_process.obo
 all: build/subsets/neoplasm.owl
 all: build/subsets/neoplasm.obo
 
+.PHONY: test
+test:
+	$(ROBOT) convert -i build/subsets/biological_process.owl -o build/test.owl
+	$(ROBOT) convert -i build/subsets/neoplasm.owl -o build/test.owl
+
 .PHONY: clean
 clean:
 	rm -rf build lib local_maven_repo target
@@ -191,3 +196,4 @@ clean:
 .PHONY: tidy
 tidy:
 	rm -f build/Thesaurus*
+
