@@ -4,7 +4,20 @@
             [clj-yaml.core :as yaml])
   (:import (org.obolibrary.robot IOHelper)
            (org.semanticweb.owlapi.apibinding OWLManager)
-           (org.semanticweb.owlapi.model AxiomType IRI OWLLiteral)))
+           (org.semanticweb.owlapi.model
+            AxiomType
+            IRI
+            OWLAnnotationAssertionAxiom
+            OWLAnnotationProperty
+            OWLAnnotationValue
+            OWLAxiom
+            OWLDataFactory
+            OWLDatatype
+            OWLLiteral
+            OWLOntology
+            OWLOntologyManager)))
+
+(set! *warn-on-reflection* true)
 
 ;;;; Configuration
 
@@ -58,21 +71,21 @@
        yaml/parse-string
        add-translation))
 
-(def io-helper (IOHelper.))
-(def output-manager (. OWLManager createOWLOntologyManager))
-(def data-factory (. output-manager getOWLDataFactory))
+(def ^IOHelper io-helper (IOHelper.))
+(def ^OWLOntologyManager output-manager (. OWLManager createOWLOntologyManager))
+(def ^OWLDataFactory data-factory (. output-manager getOWLDataFactory))
 
 (defn get-property
   "Given the config map and an OWLAnnotationAssertionAxiom,
    if the property should be translated,
    then return the new property,
    otherwise return the axiom's same property."
-  [config axiom]
-  (let [property (.. axiom getProperty getIRI toString)]
+  [config ^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationProperty property (.. axiom getProperty getIRI toString)]
     (if (find (:translations config) property)
       (. data-factory
          getOWLAnnotationProperty
-         (IRI/create (get (:translations config) property)))
+         (IRI/create ^String (get (:translations config) property)))
       (. axiom getProperty))))
 
 ; <ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#">
@@ -94,8 +107,9 @@
 ;  <ncicp:go-source>CGAP</ncicp:go-source>
 ; </ncicp:ComplexGOAnnotation>" ,
 
-(defn parse [s]
+(defn parse
   "Given an XML string, return a nested map representation."
+  [^String s]
   (try
     (clojure.xml/parse
      (java.io.ByteArrayInputStream. (.getBytes s)))
@@ -106,20 +120,21 @@
    filter the XML content for the first matching tag,
    then return its content as an OWLLiteral string."
   [primary xml]
-  (->> xml
-       :content
-       (filter #(= (name (:tag %)) primary))
-       (map :content)
-       first
-       (apply str)
-       (. data-factory getOWLLiteral)))
+  (let [^String value
+        (->> xml
+             :content
+             (filter #(= (name (:tag %)) primary))
+             (map :content)
+             first
+             (apply str))]
+    (. data-factory getOWLLiteral value)))
 
 (defn get-secondary-annotation
   "Given the config map, a tag name, and a content string,
    try to find a translation of the tag
    return an OWLAnnotation."
-  [config tag content]
-  (if-let [property
+  [config tag ^String content]
+  (if-let [^String property-iri
            (->> tag
                 (expand (:prefixes config))
                 (get (:translations config)))]
@@ -127,23 +142,37 @@
        getOWLAnnotation
        (. data-factory
           getOWLAnnotationProperty
-          (IRI/create property))
+          (IRI/create property-iri))
        (. data-factory
           getOWLLiteral
           content))
     (throw (Exception. (str "No translation for " tag)))))
+
+(defn get-datatype
+  [^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationValue value (. axiom getValue)
+        ^OWLLiteral literal (. value asLiteral)
+        ^OWLDatatype datatype (. literal getDatatype)
+        ^IRI iri (. datatype getIRI)]
+    (. iri toString)))
+
+(defn get-literal
+  [^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationValue value (. axiom getValue)
+        ^OWLLiteral literal (. value asLiteral)]
+    (. literal getLiteral)))
 
 (defn get-annotations
   "Given the config map and an OWLAnnotationAssertionAxiom,
    if the axiom value is an XMLLiteral then return a list
    with the primary value followed by zero or more annotations,
    otherwise return a list with just the axiom's value."
-  [config axiom]
+  [config ^OWLAnnotationAssertionAxiom axiom]
   (try
     (if (and (instance? OWLLiteral (. axiom getValue))
-             (= (.. axiom getValue getDatatype getIRI toString)
+             (= (get-datatype axiom)
                 "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral"))
-      (let [xml       (parse (.. axiom getValue getLiteral))
+      (let [xml       (parse (get-literal axiom))
             root      (:tag xml)
             primary   (-> config :xml root :primary)
             secondary (-> config :xml root :secondary set)]
@@ -163,15 +192,11 @@
       [(. axiom getValue)])))
 
 (defn convert-annotation-axiom!
-  "Given a configuration map, an output ontology, a state map,
-   and an annotation axiom,
-   copy/convert the axiom, add it to the output ontology,
-   and return the updated state map."
-  [config output-ontology state axiom]
+  [config ^OWLOntology output-ontology state ^OWLAnnotationAssertionAxiom axiom]
   (let [subject  (. axiom getSubject)
-        property (get-property config axiom)
+        ^OWLAnnotationProperty property (get-property config axiom)
         property-iri (. (. property getIRI) toString)
-        [value & annotations] (get-annotations config axiom)]
+        [^OWLAnnotationValue value & annotations] (get-annotations config axiom)]
     ;; When the axiom is a definition
     ;; and there's already a definition annotation for this subject,
     ;; then skip this axiom.
@@ -211,8 +236,8 @@
 (defn convert-axiom!
   "Given a configuration map, an output ontology, a state map, and an axiom,
    copy/convert the axiom, add it to the output ontology,
-   and return the updated state map."
-  [config output-ontology state axiom]
+   and return an updated state map."
+  [config ^OWLOntology output-ontology state ^OWLAxiom axiom]
   ;; When this is an annotation axiom, we might want to convert it.
   ;; Copy all non-annotation axioms
   (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
@@ -226,11 +251,11 @@
   the upstream NCI Taxonomy OWL file, and the output ncit.owl file,
   go through every axiom and convert it to use OBO-standard annotations,
   then save to the output path."
-  [config-path annotation-path input-path output-path]
+  [config-path ^String annotation-path ^String input-path ^String output-path]
   (println "Using" config-path "to convert" input-path "to" output-path)
   (let [config          (read-config config-path)
-        input-ontology  (. io-helper loadOntology input-path)
-        output-ontology (. io-helper loadOntology annotation-path)]
+        ^OWLOntology input-ontology  (. io-helper loadOntology input-path)
+        ^OWLOntology output-ontology (. io-helper loadOntology annotation-path)]
     (reduce
      (partial convert-axiom! config output-ontology)
      {:defined #{}}
