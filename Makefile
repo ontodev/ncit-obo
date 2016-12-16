@@ -96,22 +96,6 @@ build/cl.owl: | build
 	curl -Lko $@ $(OBO)/cl.owl
 
 
-### Configuration Sheets
-#
-# https://docs.google.com/spreadsheets/d/1PZ2lHSeRK_yn5LqYnejRyI-_GSXbkGKE5pjhTRqFjKI/edit
-#
-# WARN: The config.yml drives the configuration, not these sheets.
-
-ID  := 1PZ2lHSeRK_yn5LqYnejRyI-_GSXbkGKE5pjhTRqFjKI
-URL := https://docs.google.com/spreadsheets/d/$(ID)/export?format=tsv&gid=
-
-build/AnnotationProperties.tsv: | build
-	curl -L -o $@ "$(URL)1392969515"
-
-build/XMLLiterals.tsv: | build
-	curl -L -o $@ "$(URL)601798304"
-
-
 ### Subsets
 #
 # Use ROBOT to extract various subsets of the converted ontology.
