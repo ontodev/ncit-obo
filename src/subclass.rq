@@ -1,0 +1,19 @@
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl:   <http://www.w3.org/2002/07/owl#>
+PREFIX obo:   <http://purl.obolibrary.org/obo/>
+PREFIX oio:   <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX ncit:  <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>
+PREFIX ncicp: <http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#>
+
+SELECT DISTINCT ?s ?p ?o
+WHERE {
+  VALUES ?p {
+    rdfs:label
+    oio:hasExactSynonym
+  }
+  ?s
+    rdfs:subClassOf* ROOT ;
+    ?p ?o .
+}
+ORDER BY ?s

@@ -13,7 +13,7 @@ This tool converts the NCI Thesaurus OWL file to new OWL file using OBO-standard
 ## Requirements
 
 - GNU Make
-- Java 7
+- Java 8
 - Maven 3
 - Leiningen 2.5
 

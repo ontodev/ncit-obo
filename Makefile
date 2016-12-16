@@ -10,7 +10,7 @@
 #
 # - curl
 # - unzip
-# - Java 7
+# - Java 8
 # - Maven
 # - Leiningen 2.5+
 
@@ -59,39 +59,6 @@ lib/robot.jar: | lib
 local_maven_repo: lib/robot.jar
 	mkdir -p $@
 	lein deploy $@ org.obolibrary/robot 0.0.1-SNAPSHOT $<
-
-
-#### Apache Jena
-#
-# Download and extract.
-
-lib/jena.zip: | lib
-	curl -Lo $@ $(APACHE_MIRROR)/jena/binaries/apache-jena-3.0.1.zip
-
-lib/jena: lib/jena.zip
-	rm -rf $@
-	unzip -q -d lib $<
-	mv lib/apache-jena-3.0.1 $@
-
-lib/jena/bin/tdbloader: | lib/jena
-
-
-#### Apache Jena Fuseki
-#
-# Download, extract, and configure.
-
-lib/fuseki.zip: | lib
-	curl -Lo $@ $(APACHE_MIRROR)/jena/binaries/apache-jena-fuseki-2.3.1.zip
-
-lib/fuseki: lib/fuseki.zip
-	rm -rf $@
-	unzip -q -d lib $<
-	mv lib/apache-jena-fuseki-2.3.1 $@
-
-lib/fuseki/shiro.ini: | lib/fuseki
-	echo '[urls]' > $@
-	echo '# Everything open' >> $@
-	echo '/**=anon' >> $@
 
 
 ### Build
@@ -145,32 +112,6 @@ build/XMLLiterals.tsv: | build
 	curl -L -o $@ "$(URL)601798304"
 
 
-### Local Triplestore
-#
-# Run Fuseki locally from a second shell:
-#
-#     make fuseki-load
-#     make fuseki
-
-.PHONY: fuseki-ncit
-fuseki-ncit: build/ncit.owl | lib/jena/bin/tdbloader lib/fuseki
-	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(NCIT)' $<
-
-# Handle OBO ontologies:
-
-.PHONY: fuseki-%
-fuseki-%: build/%.owl | lib/jena/bin/tdbloader lib/fuseki
-	$(word 1,$|) --loc $(word 2,$|)/tdb --graph '$(OBO)/$*.owl' $<
-
-.PHONY: fuseki-load
-fuseki-load: fuseki-ncit fuseki-go
-
-# Run Fuseki in a second shell!
-.PHONY: fuseki
-fuseki: | lib/fuseki/tdb lib/fuseki/shiro.ini
-	cd lib/fuseki && export FUSEKI_HOME=. && ./fuseki-server --loc tdb /db
-
-
 ### Subsets
 #
 # Use ROBOT to extract various subsets of the converted ontology.
@@ -205,15 +146,31 @@ build/ncit.owl: $(NCIT_OBO_JAR) src/config.yml src/base.ttl build/Thesaurus.owl
 	$(NCIT_OBO) convert $(wordlist 2,9,$^) $@
 
 
+### Align
+#
+# We use ROBOT to run SPARQL queries and extract subclasses.
+
+build/ncit_%.rq: src/subclass.rq
+	sed 's/ROOT/ncit:$*/' < $< > $@
+
+build/GO_%.rq: src/subclass.rq
+	sed 's/ROOT/obo:GO_$*/' < $< > $@
+
+build/ncit_%.csv: build/Thesaurus.owl build/ncit_%.rq | lib/robot.jar
+	$(ROBOT) query --input $(word 1,$^) --select $(word 2,$^) $@
+
+build/GO_%.csv: build/go.owl build/GO_%.rq | lib/robot.jar
+	$(ROBOT) query --input $(word 1,$^) --select $(word 2,$^) $@
+
+#### Align Cellular Process
+#
 # Align GO_0044763 single-organism cellular process
 # to ncit:C20480 Cellular Process
 # and write a report.
-#
-# WARN: requires a runnig Fuseki instance, with NCIt and GO loaded.
-# See above.
 
-build/cellular_process.tsv: $(NCIT_OBO_JAR) build/Thesaurus.owl build/go.owl
-	$(NCIT_OBO) align $(NCIT) ncit:C20480 $(OBO)/go.owl obo:GO_0044763 $@
+build/cellular_process.tsv: $(NCIT_OBO_JAR) build/ncit_C20480.csv build/GO_0044763.csv
+	$(NCIT_OBO) align $(word 2,$^) $(word 3,$^) $@
+
 
 # Compress build artifacts.
 

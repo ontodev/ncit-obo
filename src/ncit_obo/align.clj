@@ -1,14 +1,14 @@
 (ns ncit-obo.align
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
+            [clojure.data.csv :as csv]
             [clojure.math.combinatorics :as combo]
             [clojure.core.reducers :as r]
-            [clj-http.client :as http]
             ;[clj-fuzzy.metrics :refer [levenshtein]]
             [clojure-stemmer.porter.stemmer :refer [stemming]]
-            [clucy.core :as clucy]
+            [clucy.core :as clucy]))
             ;[clojure.core.matrix :as m]
-            ))
+
 
 (set! *warn-on-reflection* true)
 
@@ -49,42 +49,6 @@
        sort
        (string/join "")))
 
-;; We fetch the labels from an Apache Fuseki 2 server using SPARQL.
-;;
-;; 1. build the SPARQL query (just string manipulation)
-;; 2. make an HTTP request (using clj-http)
-;; 3. process the JSON results
-
-;; Define common prefixes.
-;; TODO: better to load from a shared file
-
-(def prefixes "PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
-PREFIX owl:   <http://www.w3.org/2002/07/owl#>
-PREFIX obo:   <http://purl.obolibrary.org/obo/>
-PREFIX oio:   <http://www.geneontology.org/formats/oboInOwl#>
-PREFIX ncit:  <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>
-PREFIX ncicp: <http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#>
-")
-
-;; Query a given graph
-;; for all terms that are subClassOf (transitive) of a given term,
-;; and selected annotations for labels and synonyms.
-
-(def subclass-query
-  (str prefixes "
-SELECT DISTINCT ?s ?p ?o
-FROM <%s>
-WHERE {
-  VALUES ?p {
-    rdfs:label
-    oio:hasExactSynonym
-  }
-  ?s rdfs:subClassOf* %s ;
-     ?p ?o .
-}
-ORDER BY ?s"))
-
 (defn shorten
   "Given a string with IRIs,
    return a string with CURIEs."
@@ -95,32 +59,26 @@ ORDER BY ?s"))
       (string/replace "http://www.geneontology.org/formats/oboInOwl#" "oio:")
       (string/replace "http://purl.obolibrary.org/obo/GO_" "GO:")))
 
-
 ;; A "SynonymMap" represents a synonym for a term.
 
 ;; TODO: define schema for SynonymMap
 
 (defn process-annotations
-  "Given IRI strings for a graph and a root term,
-   run a SPARQL query,
+  "Given a path a CSV file with the results of a SPARQL query (subclass.rq)
    and return a list of SynonymMaps."
-  [graph root]
-  (let [query  (format subclass-query graph root)
-        params {:content-type "application/sparql-query"
-                :accept "application/sparql-results+json"
-                :as :json
-                :body query}]
-    (->> (http/post "http://localhost:3030/db/query" params)
-         :body
-         :results
-         :bindings
+  [path]
+  (with-open [reader (io/reader path)]
+    (->> reader
+         csv/read-csv
+         rest
          (map
-          (fn [x]
-            {:subject      (-> x :s :value)
-             :predicate    (-> x :p :value)
-             :synonym      (-> x :o :value)
+          (fn [[s p o]]
+            {:subject      s
+             :predicate    p
+             :synonym      o
              :synonym-type :exact ; TODO: allow for other types
-             :normalized   (-> x :o :value process-annotation)})))))
+             :normalized   (process-annotation o)}))
+         doall)))
 
 ;; These are the headers of our output table.
 
@@ -178,34 +136,34 @@ ORDER BY ?s"))
 ;; I couldn't figure out why.
 
 #_(defn da-lev [^String str1 ^String str2]
-  (let [l1 (count str1)
-        l2 (count str2)
-        mx (m/new-matrix :ndarray (inc l1) (inc l2))]
-    (m/mset! mx 0 0 0)
-    (dotimes [i l1]
-      (m/mset! mx (inc i) 0 (inc i)))
-    (dotimes [j l2]
-      (m/mset! mx 0 (inc j) (inc j)))
-    (dotimes [i l1]
+    (let [l1 (count str1)
+          l2 (count str2)
+          mx (m/new-matrix :ndarray (inc l1) (inc l2))]
+      (m/mset! mx 0 0 0)
+      (dotimes [i l1]
+        (m/mset! mx (inc i) 0 (inc i)))
       (dotimes [j l2]
-        (let [i+ (inc i) j+ (inc j)
-              i- (dec i) j- (dec j)
-              cost (if (= (.charAt str1 i)
-                          (.charAt str2 j))
-                     0 1)]
-          (m/mset! mx i+ j+
-                   (min (inc (m/mget mx i j+))
-                        (inc (m/mget mx i+ j))
-                        (+ (m/mget mx i j) cost)))
-          (if (and (pos? i) (pos? j)
-                   (= (.charAt str1 i)
-                      (.charAt str2 j-))
-                   (= (.charAt str1 i-)
-                      (.charAt str2 j)))
+        (m/mset! mx 0 (inc j) (inc j)))
+      (dotimes [i l1]
+        (dotimes [j l2]
+          (let [i+ (inc i) j+ (inc j)
+                i- (dec i) j- (dec j)
+                cost (if (= (.charAt str1 i)
+                            (.charAt str2 j))
+                       0 1)]
             (m/mset! mx i+ j+
-                     (min (m/mget mx i+ j+)
-                          (+ (m/mget mx i- j-) cost)))))))
-    (m/mget mx l1 l2)))
+                     (min (inc (m/mget mx i j+))
+                          (inc (m/mget mx i+ j))
+                          (+ (m/mget mx i j) cost)))
+            (if (and (pos? i) (pos? j)
+                     (= (.charAt str1 i)
+                        (.charAt str2 j-))
+                     (= (.charAt str1 i-)
+                        (.charAt str2 j)))
+              (m/mset! mx i+ j+
+                       (min (m/mget mx i+ j+)
+                            (+ (m/mget mx i- j-) cost)))))))
+      (m/mget mx l1 l2)))
 
 (defn measure
   [syn1 syn2]
@@ -230,7 +188,6 @@ ORDER BY ?s"))
        (map (partial apply measure))
        (apply min-key #(nth % 2))
        (zipmap [:syn1 :syn2 :distance])))
-
 
 ;; These alternative functions use a Lucene index.
 ;; They are *much* faster,
@@ -266,8 +223,8 @@ ORDER BY ?s"))
 (def test-terms
   #{"http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16399" ; Cell Differentiation Process
     "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28391" ; B-Cell Differentiation
-    "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C19064" ; Thymic T-Cell Selection
-    })
+    "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C19064"}) ; Thymic T-Cell Selection
+
 
 ;; This is the main function:
 ;;
@@ -278,18 +235,18 @@ ORDER BY ?s"))
 ;; 5. write results to a table
 
 (defn align
-  "Given graph and root IRIs that specify two branches,
+  "Given two paths to results of a SPARQL query (subclass.rq)
    and an output file path,
    match the first branch against the second branch,
    and write a report to the output file."
-  [graph1 root1 graph2 root2 output-path]
-  (let [branch2 (process-annotations graph2 root2)]
+  [input-path-1 input-path-2 output-path]
+  (let [branch2 (process-annotations input-path-2)]
     ;; When using the Lucene methods,
     ;; you need to create and fill an index.
     ; index   (clucy/memory-index)
     ;(apply clucy/add index branch2)
     (reset! counter 0)
-    (->> (process-annotations graph1 root1)
+    (->> (process-annotations input-path-1)
          ;(filter #(contains? test-terms (:subject %)))
          (partition-by :subject)
          ;(take 20)
@@ -303,42 +260,3 @@ ORDER BY ?s"))
          (map shorten)
          (string/join "\n")
          (spit output-path))))
-
-;; These are some examples for testing.
-
-(comment
-  (def graph1 "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl")
-  (def root1  "ncit:C20480") ; Cellular Process
-  (def root1  "ncit:C28391") ; B-Cell Differentiation
-  (def term1  "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C28391") ; B-Cell Differentiation
-  (def graph2 "http://purl.obolibrary.org/obo/go.owl")
-  (def root2  "obo:GO_0044763") ; single-organism cellular process
-  (def term2  "http://purl.obolibrary.org/obo/GO_0030183") ; b cell differentiation
-  (def index (clucy/memory-index))
-  (def branch2 (process-annotations graph2 root2))
-  (apply clucy/add index branch2)
-  (align graph1 root1 graph2 root2 "build/test.tsv")
-  (def pair1
-    [{:subject "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16399"
-      :predicate "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym"
-      :synonym "Cell Differentiation"
-      :synonym-type :exact
-      :normalized "celldifferenti"}
-     {:subject "http://purl.obolibrary.org/obo/GO_0000001"
-      :predicate "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym"
-      :synonym "mitochondrial inheritance"
-      :synonym-type :exact
-      :normalized "inheritmitochondri"}])
-  (def pair2
-    [{:subject "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C16399"
-      :predicate "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym"
-      :synonym "Cell Differentiation"
-      :synonym-type :exact
-      :normalized "celldifferenti"}
-     {:subject "http://purl.obolibrary.org/obo/GO_0000001"
-      :predicate "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym"
-      :synonym "mitochondrial inheritance"
-      :synonym-type :exact
-      :normalized "celldifferenti"}])
-  ; stuff
-  )
