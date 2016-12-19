@@ -123,6 +123,25 @@ build/subsets/neoplasm.owl: build/ncit.owl | lib/robot.jar build/subsets
 	--ontology-iri '$(OBO)/ncit/subsets/neoplasm.owl' \
 	--output $@
 
+build/Neoplasm_Core.csv: | build
+	curl -Lko $@ "http://evs.nci.nih.gov/ftp1/NCI_Thesaurus/Neoplasm/Neoplasm_Core.csv"
+
+build/subsets/neoplasm_core.txt: build/Neoplasm_Core.csv | build/subsets
+	< $< \
+	awk -F, '{ print "$(NCIT)#" $$1}' \
+	| tail -n+2 \
+	> $@
+
+build/subsets/neoplasm_core.owl: build/ncit.owl build/subsets/neoplasm_core.txt | lib/robot.jar build/subsets
+	$(ROBOT) extract \
+	--input $< \
+	--method MIREOT \
+	--upper-term '$(NCIT)#C7057' \
+	--lower-terms $(word 2,$^) \
+	annotate \
+	--ontology-iri '$(OBO)/ncit/subsets/neoplasm_core.owl' \
+	--output $@
+
 
 ### Run
 #
@@ -183,6 +202,8 @@ all: build/subsets/biological_process.owl
 all: build/subsets/biological_process.obo
 all: build/subsets/neoplasm.owl
 all: build/subsets/neoplasm.obo
+all: build/subsets/neoplasm_core.owl
+all: build/subsets/neoplasm_core.obo
 
 .PHONY: test
 test:
