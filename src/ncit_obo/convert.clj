@@ -135,7 +135,7 @@
   [{:keys [obsolete] :as config} ^OWLAxiom axiom]
   (and
    (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
-   (= (. axiom getProperty) (:property obsolete))
+   (= (. ^OWLAnnotationAssertionAxiom axiom getProperty) (:property obsolete))
    (contains? (:values obsolete) (get-literal axiom))))
 
 (defn get-obsoletes

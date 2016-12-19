@@ -1,5 +1,4 @@
 (ns ncit-obo.convert-test
-  "Integration tests against API."
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
             [ncit-obo.convert :refer :all])
