@@ -21,6 +21,8 @@
         <P366 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual_Entities</P366>
         <P90 rdf:parseType="Literal"><ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:term-name>Conceptual Entity</ncicp:term-name><ncicp:term-group>PT</ncicp:term-group><ncicp:term-source>NCI</ncicp:term-source></ncicp:ComplexTerm></P90>
         <P97 rdf:parseType="Literal"><ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:def-definition>An organizational header for concepts representing mostly abstract entities.</ncicp:def-definition><ncicp:def-source>NCI</ncicp:def-source></ncicp:ComplexDefinition></P97>
+        <!-- ignore duplicate definitions -->
+        <P97 rdf:parseType="Literal"><ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:def-definition>An organizational header for concepts representing mostly abstract entities.</ncicp:def-definition><ncicp:def-source>NCI</ncicp:def-source></ncicp:ComplexDefinition></P97>
         <code rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C20181</code>
         <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</rdfs:label>
     </owl:Class>

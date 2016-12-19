@@ -76,6 +76,11 @@
 (def ^OWLOntologyManager output-manager (. OWLManager createOWLOntologyManager))
 (def ^OWLDataFactory data-factory (. output-manager getOWLDataFactory))
 
+(defn annotation-property
+  "Given an IRI string, return an OWL Annotation Property."
+  [^String iri]
+  (. data-factory getOWLAnnotationProperty (IRI/create iri)))
+
 (defn get-property
   "Given the config map and an OWLAnnotationAssertionAxiom,
    if the property should be translated,
@@ -84,16 +89,14 @@
   [config ^OWLAnnotationAssertionAxiom axiom]
   (let [^OWLAnnotationProperty property (.. axiom getProperty getIRI toString)]
     (if (find (:translations config) property)
-      (. data-factory
-         getOWLAnnotationProperty
-         (IRI/create ^String (get (:translations config) property)))
+      (annotation-property (get (:translations config) property))
       (. axiom getProperty))))
 
 ; <ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#">
 ;  <ncicp:term-name>Display Name</ncicp:term-name>
 ;  <ncicp:term-group>SY</ncicp:term-group>
 ;  <ncicp:term-source>NCI</ncicp:term-source>
-; </ncicp:ComplexTerm>" ,
+; </ncicp:ComplexTerm>" ,)
 
 ; <ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#">
 ;  <ncicp:def-definition>Provides an alternative Preferred Name for use in some NCI systems.</ncicp:def-definition>
@@ -226,46 +229,49 @@
         value
         (set annotations))))
 
+(def iao-definition
+  (annotation-property "http://purl.obolibrary.org/obo/IAO_0000115"))
+
 (defn convert-annotation-axiom!
-  "Given a configuration, an ontology, a state, and an axiom
-   try to convert the axiom and update the ontology."
-  [config
-   ^OWLOntology ontology
-   state
-   ^OWLAnnotationAssertionAxiom axiom]
-  (let [^OWLAnnotationSubject subject  (. axiom getSubject)
+  "Given an ontology, a configuration, and an axiom
+   try to convert the axiom, update the ontology,
+   and return the updated config."
+  [^OWLOntology ontology config ^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationSubject subject (. axiom getSubject)
         ^OWLAnnotationProperty property (get-property config axiom)
-        property-iri (. (. property getIRI) toString)
         [^OWLAnnotationValue value & annotations] (get-annotations config axiom)]
-    ;; When the axiom is a definition
-    ;; and there's already a definition annotation for this subject,
-    ;; then skip this axiom.
-    ;; This condition is a hack to avoid duplicate definitions,
-    ;; which break the OBOFormatWriter.
-    (if (and (= property-iri "http://purl.obolibrary.org/obo/IAO_0000115")
-             (contains? (:defined state) subject))
-      state
-      ;; Copy/convert this axiom
-      (do
-        (assert-annotation! ontology subject property value)
-        (when (seq? annotations)
-          (assert-annotations! ontology subject property value annotations))
-        (if (= property-iri "http://purl.obolibrary.org/obo/IAO_0000115")
-          (update-in state [:defined] conj subject)
-          state)))))
+    ; NCIt contains some duplicate definions
+    ; that break the OWLAPI's OBO converter.
+    ; Don't define more than once.
+    ; Otherwise assert the annotations
+    (when-not
+     (and (= property iao-definition)
+          (contains? (:defined config) subject))
+      (assert-annotation! ontology subject property value)
+      (when (seq? annotations)
+        (assert-annotations! ontology subject property value annotations)))
+
+    ; Update the configuration state
+    (cond
+      (= property iao-definition)
+      (update-in config [:defined] conj subject)
+
+      :else
+      config)))
+
+;; When this is an annotation axiom, we might want to convert it.
+;; Copy all non-annotation axioms
 
 (defn convert-axiom!
-  "Given a configuration map, an output ontology, a state map, and an axiom,
+  "Given an output ontology, a configuration map, and an axiom,
    copy/convert the axiom, add it to the output ontology,
-   and return an updated state map."
-  [config ^OWLOntology output-ontology state ^OWLAxiom axiom]
-  ;; When this is an annotation axiom, we might want to convert it.
-  ;; Copy all non-annotation axioms
+   and return an updated config."
+  [^OWLOntology output-ontology config ^OWLAxiom axiom]
   (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
-    (convert-annotation-axiom! config output-ontology state axiom)
+    (convert-annotation-axiom! output-ontology config axiom)
     (do
       (. output-manager addAxiom output-ontology axiom)
-      state)))
+      config)))
 
 (defn convert
   "Given paths for the configuration YAML file, the base annotation file,
@@ -278,7 +284,7 @@
         ^OWLOntology input-ontology  (. io-helper loadOntology input-path)
         ^OWLOntology output-ontology (. io-helper loadOntology annotation-path)]
     (reduce
-     (partial convert-axiom! config output-ontology)
-     {:defined #{}}
+     (partial convert-axiom! output-ontology)
+     (assoc config :defined #{})
      (. input-ontology getAxioms))
     (. io-helper saveOntology output-ontology output-path)))
