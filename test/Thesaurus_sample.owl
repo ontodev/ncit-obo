@@ -18,6 +18,7 @@
         <P106 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Classification</P106>
         <P108 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</P108>
         <P207 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C1254372</P207>
+        <P310 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Obsolete_Concept</P310>
         <P366 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual_Entities</P366>
         <P90 rdf:parseType="Literal"><ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:term-name>Conceptual Entity</ncicp:term-name><ncicp:term-group>PT</ncicp:term-group><ncicp:term-source>NCI</ncicp:term-source></ncicp:ComplexTerm></P90>
         <P97 rdf:parseType="Literal"><ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#"><ncicp:def-definition>An organizational header for concepts representing mostly abstract entities.</ncicp:def-definition><ncicp:def-source>NCI</ncicp:def-source></ncicp:ComplexDefinition></P97>

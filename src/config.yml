@@ -6,6 +6,12 @@ prefixes:
   obo: http://purl.obolibrary.org/obo/
   oio: http://www.geneontology.org/formats/oboInOwl#
 
+obsolete:
+  property: ncit:P310
+  values:
+    - Retired_Concept
+    - Obsolete_Concept
+
 mapping:
   ncit:P90: oio:hasExactSynonym
   ncit:P97: obo:IAO_0000115

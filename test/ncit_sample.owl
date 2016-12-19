@@ -44,6 +44,12 @@
     
 
 
+    <!-- http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P310 -->
+
+    <owl:AnnotationProperty rdf:about="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P310"/>
+    
+
+
     <!-- http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P366 -->
 
     <owl:AnnotationProperty rdf:about="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P366"/>
@@ -94,15 +100,16 @@
     <!-- http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20181 -->
 
     <owl:Class rdf:about="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20181">
-        <rdfs:subClassOf rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
         <Thesaurus:P106 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Classification</Thesaurus:P106>
         <Thesaurus:P108 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</Thesaurus:P108>
         <Thesaurus:P207 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C1254372</Thesaurus:P207>
+        <Thesaurus:P310 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Obsolete_Concept</Thesaurus:P310>
         <Thesaurus:P366 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual_Entities</Thesaurus:P366>
         <Thesaurus:code rdf:datatype="http://www.w3.org/2001/XMLSchema#string">C20181</Thesaurus:code>
         <obo:IAO_0000115 rdf:datatype="http://www.w3.org/2001/XMLSchema#string">An organizational header for concepts representing mostly abstract entities.</obo:IAO_0000115>
         <oboInOwl:hasExactSynonym rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</oboInOwl:hasExactSynonym>
         <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Conceptual Entity</rdfs:label>
+        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
     </owl:Class>
     <owl:Axiom>
         <owl:annotatedSource rdf:resource="http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#C20181"/>

@@ -12,13 +12,50 @@
             OWLAnnotationSubject
             OWLAnnotationValue
             OWLAxiom
+            OWLClass
             OWLDataFactory
             OWLDatatype
+            OWLEquivalentClassesAxiom
             OWLLiteral
             OWLOntology
-            OWLOntologyManager)))
+            OWLOntologyManager
+            OWLSubClassOfAxiom)))
 
 (set! *warn-on-reflection* true)
+
+;;;; OWL Helper Functions
+
+(def ^IOHelper io-helper (IOHelper.))
+(def ^OWLOntologyManager output-manager (. OWLManager createOWLOntologyManager))
+(def ^OWLDataFactory data-factory (. output-manager getOWLDataFactory))
+
+(defn annotation-property
+  "Given an IRI string, return an OWL Annotation Property."
+  [^String iri]
+  (. data-factory getOWLAnnotationProperty (IRI/create iri)))
+
+(def iao-definition
+  (annotation-property "http://purl.obolibrary.org/obo/IAO_0000115"))
+
+(def owl-deprecated
+  (annotation-property "http://www.w3.org/2002/07/owl#deprecated"))
+
+(def ncit-deprecated
+  (annotation-property "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#P310"))
+
+(defn get-datatype
+  [^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationValue value (. axiom getValue)
+        ^OWLLiteral literal (.. value asLiteral orNull)
+        ^OWLDatatype datatype (. literal getDatatype)
+        ^IRI iri (. datatype getIRI)]
+    (. iri toString)))
+
+(defn get-literal
+  [^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationValue value (. axiom getValue)
+        ^OWLLiteral literal (.. value asLiteral orNull)]
+    (. literal getLiteral)))
 
 ;;;; Configuration
 
@@ -47,6 +84,16 @@
       (str (get prefixes (keyword p)) l)
       s)))
 
+(defn add-obsolete
+  "Given a config map with :prefixes and :mappings maps,
+   assoc :obsolete with a property."
+  [config]
+  (-> config
+      (update-in
+       [:obsolete :property]
+       #(annotation-property (expand (:prefixes config) %)))
+      (update-in [:obsolete :values] set)))
+
 (defn add-translation
   "Given a config map with :prefixes and :mappings maps,
    assoc a :translation map,
@@ -70,16 +117,8 @@
   (->> config-path
        slurp
        yaml/parse-string
+       add-obsolete
        add-translation))
-
-(def ^IOHelper io-helper (IOHelper.))
-(def ^OWLOntologyManager output-manager (. OWLManager createOWLOntologyManager))
-(def ^OWLDataFactory data-factory (. output-manager getOWLDataFactory))
-
-(defn annotation-property
-  "Given an IRI string, return an OWL Annotation Property."
-  [^String iri]
-  (. data-factory getOWLAnnotationProperty (IRI/create iri)))
 
 (defn get-property
   "Given the config map and an OWLAnnotationAssertionAxiom,
@@ -92,11 +131,27 @@
       (annotation-property (get (:translations config) property))
       (. axiom getProperty))))
 
+(defn obsolete?
+  [{:keys [obsolete] :as config} ^OWLAxiom axiom]
+  (and
+   (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
+   (= (. axiom getProperty) (:property obsolete))
+   (contains? (:values obsolete) (get-literal axiom))))
+
+(defn get-obsoletes
+  "Given an ontology and an annotation property,
+ return a set of subjects with that annotation perpoerty."
+  [^OWLOntology ontology config]
+  (->> (. ontology getAxioms)
+       (filter (partial obsolete? config))
+       (map #(. ^OWLAnnotationAssertionAxiom % getSubject))
+       set))
+
 ; <ncicp:ComplexTerm xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#">
 ;  <ncicp:term-name>Display Name</ncicp:term-name>
 ;  <ncicp:term-group>SY</ncicp:term-group>
 ;  <ncicp:term-source>NCI</ncicp:term-source>
-; </ncicp:ComplexTerm>" ,)
+; </ncicp:ComplexTerm>" ,}))))
 
 ; <ncicp:ComplexDefinition xmlns:ncicp="http://ncicb.nci.nih.gov/xml/owl/EVS/ComplexProperties.xsd#">
 ;  <ncicp:def-definition>Provides an alternative Preferred Name for use in some NCI systems.</ncicp:def-definition>
@@ -151,20 +206,6 @@
           getOWLLiteral
           content))
     (throw (Exception. (str "No translation for " tag)))))
-
-(defn get-datatype
-  [^OWLAnnotationAssertionAxiom axiom]
-  (let [^OWLAnnotationValue value (. axiom getValue)
-        ^OWLLiteral literal (.. value asLiteral orNull)
-        ^OWLDatatype datatype (. literal getDatatype)
-        ^IRI iri (. datatype getIRI)]
-    (. iri toString)))
-
-(defn get-literal
-  [^OWLAnnotationAssertionAxiom axiom]
-  (let [^OWLAnnotationValue value (. axiom getValue)
-        ^OWLLiteral literal (.. value asLiteral orNull)]
-    (. literal getLiteral)))
 
 (defn get-annotations
   "Given the config map and an OWLAnnotationAssertionAxiom,
@@ -229,9 +270,6 @@
         value
         (set annotations))))
 
-(def iao-definition
-  (annotation-property "http://purl.obolibrary.org/obo/IAO_0000115"))
-
 (defn convert-annotation-axiom!
   "Given an ontology, a configuration, and an axiom
    try to convert the axiom, update the ontology,
@@ -251,12 +289,12 @@
       (when (seq? annotations)
         (assert-annotations! ontology subject property value annotations)))
 
-    ; Update the configuration state
-    (cond
-      (= property iao-definition)
-      (update-in config [:defined] conj subject)
+    (when (obsolete? config axiom)
+      (assert-annotation! ontology subject owl-deprecated (. data-factory getOWLLiteral true)))
 
-      :else
+    ; Update the configuration state, tracking definitions
+    (if (= property iao-definition)
+      (update-in config [:defined] conj subject)
       config)))
 
 ;; When this is an annotation axiom, we might want to convert it.
@@ -267,8 +305,29 @@
    copy/convert the axiom, add it to the output ontology,
    and return an updated config."
   [^OWLOntology output-ontology config ^OWLAxiom axiom]
-  (if (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
+  (cond
+    ; Convert annotation axiom
+    (= (. axiom getAxiomType) (. AxiomType ANNOTATION_ASSERTION))
     (convert-annotation-axiom! output-ontology config axiom)
+
+    ; Ignore subClassOf for obsolete subject
+    (and
+     (= (. axiom getAxiomType) (. AxiomType SUBCLASS_OF))
+     (contains?
+      (:obsoletes config)
+      (. ^OWLClass (. ^OWLSubClassOfAxiom axiom getSubClass) getIRI)))
+    config
+
+    ; Ignore equivalentClass for obsolete subject
+    (and
+     (= (. axiom getAxiomType) (. AxiomType EQUIVALENT_CLASSES))
+     (some
+      #(contains? (:obsoletes config) (. ^OWLClass % getIRI))
+      (. ^OWLEquivalentClassesAxiom axiom getNamedClasses)))
+    config
+
+    ; Otherwise copy the axiom
+    :else
     (do
       (. output-manager addAxiom output-ontology axiom)
       config)))
@@ -280,11 +339,14 @@
   then save to the output path."
   [config-path ^String annotation-path ^String input-path ^String output-path]
   (println "Using" config-path "to convert" input-path "to" output-path)
-  (let [config          (read-config config-path)
+  (let [config (read-config config-path)
         ^OWLOntology input-ontology  (. io-helper loadOntology input-path)
         ^OWLOntology output-ontology (. io-helper loadOntology annotation-path)]
     (reduce
      (partial convert-axiom! output-ontology)
-     (assoc config :defined #{})
+     (assoc
+      config
+      :defined #{}
+      :obsoletes (get-obsoletes input-ontology config))
      (. input-ontology getAxioms))
     (. io-helper saveOntology output-ontology output-path)))
