@@ -9,6 +9,7 @@
             IRI
             OWLAnnotationAssertionAxiom
             OWLAnnotationProperty
+            OWLAnnotationSubject
             OWLAnnotationValue
             OWLAxiom
             OWLDataFactory
@@ -192,9 +193,47 @@
       (println "XML Parse error" axiom e)
       [(. axiom getValue)])))
 
+(defn assert-annotation!
+  "Add an Annotation Assertion Axiom to an ontology."
+  [^OWLOntology ontology
+   ^OWLAnnotationSubject subject
+   ^OWLAnnotationProperty property
+   ^OWLAnnotationValue value]
+  (. output-manager
+     addAxiom
+     ontology
+     (. data-factory
+        getOWLAnnotationAssertionAxiom
+        property
+        subject
+        value)))
+
+(defn assert-annotations!
+  "Add an Annotation Assertion Axiom and a set of annotations on it
+   to an ontology."
+  [^OWLOntology ontology
+   ^OWLAnnotationSubject subject
+   ^OWLAnnotationProperty property
+   ^OWLAnnotationValue value
+   annotations]
+  (. output-manager
+     addAxiom
+     ontology
+     (. data-factory
+        getOWLAnnotationAssertionAxiom
+        property
+        subject
+        value
+        (set annotations))))
+
 (defn convert-annotation-axiom!
-  [config ^OWLOntology output-ontology state ^OWLAnnotationAssertionAxiom axiom]
-  (let [subject  (. axiom getSubject)
+  "Given a configuration, an ontology, a state, and an axiom
+   try to convert the axiom and update the ontology."
+  [config
+   ^OWLOntology ontology
+   state
+   ^OWLAnnotationAssertionAxiom axiom]
+  (let [^OWLAnnotationSubject subject  (. axiom getSubject)
         ^OWLAnnotationProperty property (get-property config axiom)
         property-iri (. (. property getIRI) toString)
         [^OWLAnnotationValue value & annotations] (get-annotations config axiom)]
@@ -208,28 +247,9 @@
       state
       ;; Copy/convert this axiom
       (do
-        (. output-manager
-           addAxiom
-           output-ontology
-           (. data-factory
-              getOWLAnnotationAssertionAxiom
-              property
-              subject
-              value))
-
-        ;; Add any required annotations to this axiom.
+        (assert-annotation! ontology subject property value)
         (when (seq? annotations)
-          (. output-manager
-             addAxiom
-             output-ontology
-             (. data-factory
-                getOWLAnnotationAssertionAxiom
-                property
-                subject
-                value
-                (set annotations))))
-
-        ;; Update the state.
+          (assert-annotations! ontology subject property value annotations))
         (if (= property-iri "http://purl.obolibrary.org/obo/IAO_0000115")
           (update-in state [:defined] conj subject)
           state)))))
