@@ -9,16 +9,19 @@
             [{:subject "foo"
               :predicate "rdfs:label"
               :synonym "Foo Bar"
+              :synonym-type "exact"
               :normalized "foobar"}]
             [{:subject "bar"
-              :predicate "rdfs:label"
+              :predicate "oio:hasNarrowSynonym"
               :synonym "foo bar process"
+              :synonym-type "other"
               :normalized "foobar"}])
            [["foo"
              "bar"
              "rdfs:label"
-             "rdfs:label"
-             "exact-exact"
+             "oio:hasNarrowSynonym"
              "Foo Bar"
              "foo bar process"
-             "foobar"]]))))
+             "foobar"
+             "exact-other"
+             "50"]]))))

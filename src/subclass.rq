@@ -11,6 +11,9 @@ WHERE {
   VALUES ?p {
     rdfs:label
     oio:hasExactSynonym
+    oio:hasBroadSynonym
+    oio:hasNarrowSynonym
+    oio:hasRelatedSynonym
   }
   ?s
     rdfs:subClassOf* ROOT ;
