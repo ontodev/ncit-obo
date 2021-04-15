@@ -1,6 +1,6 @@
 # ncit-obo
 
-**Obsolete**: Please refer to <https://github.com/NCI-Thesaurus/thesaurus-obo-edition>.
+**This repository is obsolete and not maintained. Please refer to <https://github.com/NCI-Thesaurus/thesaurus-obo-edition>.**
 
 This tool converts the NCI Thesaurus OWL file to new OWL file using OBO-standard annotations. The following converted files are available:
 
