@@ -1,5 +1,7 @@
 # ncit-obo
 
+**Obsolete**: Please refer to <https://github.com/NCI-Thesaurus/thesaurus-obo-edition>.
+
 This tool converts the NCI Thesaurus OWL file to new OWL file using OBO-standard annotations. The following converted files are available:
 
 - Full translation (~500MB):
